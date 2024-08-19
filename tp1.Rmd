@@ -1,0 +1,98 @@
+---
+title: "tp1tdvi"
+output: pdf_document
+date: "2024-08-19"
+---
+
+```{r}
+df <- read.csv("mushroom.csv")
+
+
+#formateo de datos
+
+#lógicos
+
+df$does.bruise.or.bleed <- df$does.bruise.or.bleed == "t"
+df$has.ring <- df$has.ring == "t"
+df$class <- df$class == "p"
+
+#categóricos
+
+df$cap.shape <- as.factor(df$cap.shape)
+df$cap.surface <- as.factor(df$cap.surface)
+df$cap.color <- as.factor(df$cap.color)
+df$gill.attachment <- as.factor(df$gill.attachment)
+df$gill.spacing <- as.factor(df$gill.spacing)
+df$gill.color <- as.factor(df$gill.color)
+df$stem.root <- as.factor(df$stem.root)
+df$stem.surface <- as.factor(df$stem.surface)
+df$stem.color <- as.factor(df$stem.color)
+df$veil.type <- as.factor(df$veil.type)
+df$veil.color <- as.factor(df$veil.color)
+df$ring.type <- as.factor(df$ring.type)
+df$spore.print.color <- as.factor(df$spore.print.color)
+df$habitat <- as.factor(df$habitat)
+df$season <- as.factor(df$season)
+
+
+head(df)
+
+
+```
+```{r}
+#Visualización
+
+```
+
+```{r}
+install.packages("rpart")
+install.packages("rpart.plot")
+library(rpart)
+library(rpart.plot)
+
+```
+```{r}
+set.seed(123)  # Para reproducibilidad
+
+# Número total de filas
+total_rows <- nrow(df)
+
+# Crear índices aleatorios
+indices <- sample(1:total_rows)
+
+# Calcular el tamaño de cada subconjunto
+train_size <- floor(0.7 * total_rows)
+validation_size <- floor(0.15 * total_rows)
+
+# Dividir los índices
+train_indices <- indices[1:train_size]
+validation_indices <- indices[(train_size + 1):(train_size + validation_size)]
+test_indices <- indices[(train_size + validation_size + 1):total_rows]
+
+# Crear los subconjuntos
+train_data <- df[train_indices, ]
+validation_data <- df[validation_indices, ]
+test_data <- df[test_indices, ]
+
+head(train_data)
+```
+
+```{r}
+set.seed(20)
+
+# Crear el modelo de árbol de decisión usando todas las columnas como predictores
+tree <- rpart(formula = class ~ ., 
+              data = train_data, 
+              method = "class")
+
+```
+
+```{r}
+rpart.plot(tree)
+```
+
+```{r}
+predictions  <- predict(tree, newdata = test_data, type = "class")
+mean(predictions)
+```
+
