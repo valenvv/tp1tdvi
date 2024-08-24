@@ -5,6 +5,13 @@ date: "2024-08-19"
 ---
 
 ```{r}
+library(rpart)
+library(rpart.plot)
+library(MLmetrics)
+
+```
+
+```{r}
 df <- read.csv("mushroom.csv")
 
 
@@ -45,13 +52,6 @@ head(df)
 ```
 
 ```{r}
-install.packages("rpart")
-install.packages("rpart.plot")
-library(rpart)
-library(rpart.plot)
-
-```
-```{r}
 set.seed(123)  # Para reproducibilidad
 
 # Número total de filas
@@ -73,6 +73,12 @@ test_indices <- indices[(train_size + validation_size + 1):total_rows]
 train_data <- df[train_indices, ]
 validation_data <- df[validation_indices, ]
 test_data <- df[test_indices, ]
+
+y_train <- train_data$class
+y_validation <- validation_data$class
+y_test <- test_data$class
+
+
 
 head(train_data)
 ```
@@ -148,12 +154,120 @@ tree <- rpart(formula = class ~ .,
 ```
 
 ```{r}
+# Configurar el archivo de salida con mayor resolución
+png(filename = "arbol_decision.png", width = 1600, height = 1200, res = 300)
+
+# Generar el gráfico
 rpart.plot(tree)
+
+# Cerrar el dispositivo gráfico
+dev.off()
+
 
 ```
 
 ```{r}
-predictions  <- predict(tree, newdata = test_data, type = "class")
-mean(predictions)
+# Imprimir los valores por defecto de los hiperparámetros
+cat("Valores de los hiperparámetros por defecto:\n")
+cat("minsplit:", tree$control$minsplit, "\n")
+cat("minbucket:", tree$control$minbucket, "\n")
+cat("cp:", tree$control$cp, "\n")
+cat("maxdepth:", tree$control$maxdepth, "\n")
+cat("xval:", tree$control$xval, "\n")
+cat("maxcompete:", tree$control$maxcompete, "\n")
+#teoría!!!!
+#exp del arbol
+```
+
+```{r}
+
+y_pred  <- predict(tree, newdata = test_data, type = "class")
+
+```
+
+```{r}
+ConfusionMatrix(y_pred, y_test)
+```
+
+```{r}
+Accuracy(y_pred, y_test)
+```
+
+```{r}
+Precision(y_test, y_pred)
+Recall(y_test, y_pred)
+
+```
+```{r}
+F1_Score(y_test, y_pred)
+```
+```{r}
+AUC(y_pred, y_test)
+```
+```{r}
+# Definir los rangos de valores para maxdepth, minsplit, y minbucket
+maxdepth_range <- 10:20  
+minsplit_range <- 2:5
+minbucket_range <- 1:12
+
+# Crear una lista para almacenar las precisiones
+AUC_scores <- list()
+AUC_best <- 0
+params_best <- list(0, 0, 0)
+tree_best <- NA
+cont<- 0
+
+
+# Entrenar y evaluar el modelo para cada combinación de hiperparámetros
+for (maxdepth in maxdepth_range) {
+  for (minsplit in minsplit_range) {
+    for (minbucket in minbucket_range) {
+    
+      # Crear y entrenar el modelo
+      tree <- rpart(class ~ ., 
+                     data = train_data, 
+                     method = "class",
+                     control = rpart.control(maxdepth = maxdepth, 
+                                             minsplit = minsplit, 
+                                             minbucket = minbucket,
+                                             cp = 0, 
+                                             xval = 0))
+      
+      
+      y_pred <- predict(tree, newdata = validation_data, type = "class")
+      AUC_curr <- AUC(y_pred, y_validation)
+      
+      AUC_scores[[paste("maxdepth=", maxdepth, "minsplit=", minsplit, "minbucket=", minbucket, sep="")]] <- AUC_curr
+      
+      if(AUC_curr > AUC_best){
+        AUC_best <- AUC_curr
+        params_best[1] <- maxdepth
+        params_best[2] <- minsplit
+        params_best[3] <- minbucket
+        tree_best <- tree
+      }
+      print(AUC_curr)
+      cont <- cont +1
+      print(cont)
+      
+    }
+  }
+}
+
+```
+
+```{r}
+
+#tenemos tree_best
+y_pred <- predict(tree_best, newdata = test_data, type = "class")
+AUC(y_pred, y_test)
+#comparar este valor con el del punto 3 
+```
+
+```{r}
+#7.
+print(params_best)
+print(AUC_best)
+
 ```
 
