@@ -76,6 +76,66 @@ test_data <- df[test_indices, ]
 
 head(train_data)
 ```
+```{r}
+#Análisis de datos 
+install.packages("ggplot2")
+library(ggplot2)
+
+
+# Venenosos vs No venenosos
+barplot(table(df$class),
+        main = "Cantidad de Hongos Venenosos y No Venenosos",
+        xlab = "Clase",
+        ylab = "Cantidad",
+        col = c("lightcoral", "lightgreen"),
+        names.arg = c("No Venenoso", "Venenoso"))
+
+#Variables numericas
+# > num -> no venenoso
+
+boxplot(df$stem.height ~ df$class,
+        main = "Box Plot de Stem Height por Clase",
+        xlab = "Clase",
+        ylab = "Stem Height",
+        col = c("lightcoral", "lightgreen"),
+        names = c("No Venenoso", "Venenoso"))
+
+boxplot(df$stem.width ~ df$class,
+        main = "Box Plot de Stem Width por Clase",
+        xlab = "Clase",
+        ylab = "Stem Width",
+        col = c("lightcoral", "lightgreen"),
+        names = c("No Venenoso", "Venenoso"))
+
+boxplot(df$cap.diameter ~ df$class,
+        main = "Box Plot de Cap Diameter por Clase",
+        xlab = "Clase",
+        ylab = "Cap Diameter",
+        col = c("lightcoral", "lightgreen"),
+        names = c("No Venenoso", "Venenoso"))
+```
+
+
+```{r}
+#Variables categóricas
+ggplot(df, aes(x = cap.color, fill = class)) +
+  geom_bar(position = "stack") +
+  labs(title = "Distribución de Cap Color por Clase (Venenoso/No Venenoso)",
+       x = "Cap Color",
+       y = "Cantidad",
+       fill = "Clase") +
+  scale_fill_manual(values =  c("lightcoral", "lightgreen")) +
+  theme_minimal()
+
+ggplot(df, aes(x = cap.shape, fill = class)) +
+  geom_bar(position = "stack") +
+  labs(title = "Distribución de Cap Color por Clase (Venenoso/No Venenoso)",
+       x = "Cap Color",
+       y = "Cantidad",
+       fill = "Clase") +
+  scale_fill_manual(values =  c("lightcoral", "lightgreen")) +
+  theme_minimal()
+```
 
 ```{r}
 set.seed(20)
@@ -89,6 +149,7 @@ tree <- rpart(formula = class ~ .,
 
 ```{r}
 rpart.plot(tree)
+
 ```
 
 ```{r}
