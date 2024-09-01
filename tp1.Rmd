@@ -1,7 +1,8 @@
 ---
-title: "tp1tdvi"
+title: "Trabajo Práctico 1 - Tecnología Digital VI"
+author: "Isabel Núñez, Camilo Suárez, Valentina Vitetta"
 output: pdf_document
-date: "2024-08-19"
+date: "2024-09-01"
 ---
 ## 1. Introducción al problema
 
@@ -13,7 +14,7 @@ Hemos elegido este conjunto de datos por su estructura mayoritariamente categór
 
 ## 2. Preparación de los datos
 
-#Carga del conjunto de datos y preprocesamiento
+### Carga del conjunto de datos y preprocesamiento
 
 ```{r}
 library(rpart)
@@ -92,7 +93,7 @@ y_test <- test_data$class
 
 head(train_data)
 ```
-#Análisis de datos
+### Análisis de datos
 El muestreo de datos seleccionado contiene la siguiente distribución con respecto a hongos venenosos y no venenosos:
 
 - **Total de muestras:** 50,000 hongos.
@@ -101,7 +102,7 @@ El muestreo de datos seleccionado contiene la siguiente distribución con respec
 
 ```{r}
 
-##### conteo de hongos venenosos y no venenosos
+# conteo de hongos venenosos y no venenosos
 counts <- table(df$class)
 
 barplot_obj <- barplot(counts,
@@ -171,7 +172,7 @@ boxplot(df$stem.height ~ df$class,
 
 ```
 
-Como se observa, los hongos venenosos presentan un rango intercuartílico (RIQ) más amplio, lo que indica una mayor variabilidad en la altura del tallo entre el 25% y el 75% superior de los datos en comparación con los hongos no venenosos. Esto sugiere que, aunque los hongos no venenosos muestran una mayor variabilidad general en altura, los hongos venenosos exhiben una mayor variabilidad en las alturas dentro del rango intercuartílico, es decir, en el rango más representativo de alturas. Además, los hongos no venenosos presentan una cantidad significativamente mayor de valores atípicos en comparación con los venenosos, lo que sugiere una mayor dispersión en las alturas extremas.
+Como se observa, los hongos venenosos presentan un rango intercuartílico (IQR) más amplio, lo que indica una mayor variabilidad en la altura del tallo entre el 25% y el 75% superior de los datos en comparación con los hongos no venenosos. Esto sugiere que, aunque los hongos no venenosos muestran una mayor variabilidad general en altura, los hongos venenosos exhiben una mayor variabilidad en las alturas dentro del rango intercuartílico, es decir, en el rango más representativo de alturas. Además, los hongos no venenosos presentan una cantidad significativamente mayor de valores atípicos en comparación con los venenosos, lo que sugiere una mayor dispersión en las alturas extremas.
 
 **Stem Width**
 
@@ -193,17 +194,14 @@ Sin embargo, al observar el rango intercuartílico (IQR), se encuentra que los h
 **Cap Color**
 
 ```{r}
-
-ggplot(df_counts_color, aes(x = cap.color, y = n, fill = class)) +
-  geom_bar(stat = "identity", position = "stack") +
+ggplot(df, aes(x = cap.color, fill = class)) +
+  geom_bar(position = "stack") +
   labs(title = "Distribución de Cap Color por Clase (Venenoso/No Venenoso)",
        x = "Cap Color",
        y = "Cantidad",
        fill = "Clase") +
-  scale_fill_manual(values = c("lightcoral", "lightgreen"),
-                    labels = c("No venenoso", "Venenoso")) +
+  scale_fill_manual(values =  c("lightcoral", "lightgreen"),labels = c("No venenoso", "Venenoso")) +
   theme_minimal()
-
 ```
 En el análisis del color del sombrero (**cap.color**) en los hongos venenosos y no venenosos, se destacan varias tendencias importantes.
 
@@ -281,7 +279,7 @@ cat("xval:", tree$control$xval, "\n")
 ```
 El valor por defecto de minsplit indica que para poder particionar un nodo, éste debe contar con al menos 20 observaciones, mientras que minbucket muestra que un nodo debe contar con al menos 7 observaciones para ser considerado como tal.
 
-Por otro lado, cp es el parámetro de complejidad α. Significa que el árbol no realizará una partición si la proporción de reducción del error es menor a 0.01. Cabe aclarar que este parámetro sirve para evitar hacer particiones que no reduzcan significativamente el error y así disminuir el tiempo de cómputo.
+Por otro lado, cp es el parámetro de complejidad alfa. Significa que el árbol no realizará una partición si la proporción de reducción del error es menor a 0.01. Cabe aclarar que este parámetro sirve para evitar hacer particiones que no reduzcan significativamente el error y así disminuir el tiempo de cómputo.
 
 Luego, maxdepth hace referencia a la profundidad máxima que puede alcanzar el árbol. Si bien el valor por defecto es 30, nuestro árbol tiene una profundidad de 8, lo que significa que los valores de los parámetros mencionados anteriormente le impidieron alcanzar dicho máximo.
 
@@ -456,6 +454,7 @@ A pesar de que no se encuentre en los primeros 2 cortes, también podemos notar 
 ```{r}
 importance <- tree_best$variable.importance 
 importance <- 100*importance/sum(importance)
+importance
 barplot(importance, 
         main = "Importancia de las Variables", 
         las = 2,  
