@@ -3,6 +3,17 @@ title: "tp1tdvi"
 output: pdf_document
 date: "2024-08-19"
 ---
+## 1. Introducción al problema
+
+En este trabajo práctico, utilizamos un conjunto de datos proveniente de [Kaggle](https://www.kaggle.com/datasets/bwandowando/mushroom-overload) que contiene información sobre diferentes observaciones de hongos. Este dataset cuenta con 21 variables que describen algunas características de los hongos, tales como el color y textura de sus partes, sus medidas, el hábitat, si sangran al cortarlos, entre otros. Cada una de estas características puede ser utilizada para clasificar los hongos en dos categorías principales: comestibles (edible) y venenosos (poisonous). El problema a resolver es determinar, a partir de las distintas variables predictoras, si un hongo específico es seguro para el consumo humano o no.
+
+Originalmente, contaba con más de 6 millones de observaciones, por lo que realizamos un muestreo aleatorio para reducirlo a uno de 50.000 observaciones.
+
+Hemos elegido este conjunto de datos por su estructura mayoritariamente categórica y la variedad de características, que lo hacen adecuado para el uso de árboles de decisión. Creemos que esta técnica nos permitirá segmentar los datos en base a reglas claras, facilitando una clasificación visualmente intuitiva y la interpretación de los factores determinantes. Además, los árboles de decisión son efectivos para manejar múltiples categorías y atributos, lo que los convierte en una herramienta ideal para el uso en este dataset al clasificar hongos como comestibles o venenosos.
+
+## 2. Preparación de los datos
+
+#Carga del conjunto de datos y preprocesamiento
 
 ```{r}
 library(rpart)
@@ -13,10 +24,12 @@ library(ggplot2)
 ```
 
 ```{r}
+#Carga del conjunto de datos
+
 df <- read.csv("mushroom.csv")
+df[df == ""] <- NA
 
-
-#formateo de datos
+#preprocesamiento  de datos
 
 #lógicos
 
@@ -79,8 +92,14 @@ y_test <- test_data$class
 
 head(train_data)
 ```
-```{r}
 #Análisis de datos
+El muestreo de datos seleccionado contiene la siguiente distribución con respecto a hongos venenosos y no venenosos:
+
+- **Total de muestras:** 50,000 hongos.
+- **Hongos no venenosos:** 22,664 (45.3% del total).
+- **Hongos venenosos:** 27,336 (54.7% del total).
+
+```{r}
 
 ##### conteo de hongos venenosos y no venenosos
 counts <- table(df$class)
@@ -104,22 +123,7 @@ text(x = barplot_obj,
 ```
 
 ```{r}
-#####Variables numericas
-boxplot(df$stem.height ~ df$class,
-        main = "Box Plot de Stem Height por Clase",
-        xlab = "Clase",
-        ylab = "Stem Height",
-        col = c("lightcoral", "lightgreen"),
-        names = c("No Venenoso", "Venenoso"))
-
-boxplot(df$stem.width ~ df$class,
-        main = "Box Plot de Stem Width por Clase",
-        xlab = "Clase",
-        ylab = "Stem Width",
-        col = c("lightcoral", "lightgreen"),
-        names = c("No Venenoso", "Venenoso"))
-
-##### Estadísticas descriptivas
+#Función para calcular estadísticas descriptivas
 calcular_estadisticas <- function(data, columna) {
   
   stats <- aggregate(data[[columna]] ~ class, data = data, FUN = function(x) c(mean = mean(x, na.rm = TRUE), 
@@ -143,17 +147,52 @@ calcular_estadisticas <- function(data, columna) {
   
   return(final_stats)
 }
+```
 
+**Stem height**
 
+En el análisis realizado sobre la altura del tallo (stem.height) de hongos venenosos y no venenosos, obtuvimos las siguientes estadísticas descriptivas:
+
+```{r}
 print(calcular_estadisticas(df, "stem.height"))
-print(calcular_estadisticas(df, "stem.width"))
+```
 
+La media y la mediana de la altura del tallo son mayores en los hongos no venenosos en comparación con los venenosos. Lo que nos sugiere que, en promedio, los hongos no venenosos tienen una altura de tallo mayor que los venenosos. Por otro lado, la desviación estándar para los hongos no venenosos es 3.66, mientras que para los venenosos es 2.99. Esto indica que existe una gama más amplia de alturas del tallo entre los hongos no venenosos, lo que podría reflejar una mayor diversidad en su tamaño.
+
+Para poder interpretar la distribución de los datos en cada clase, decidimos realizar un boxplot de la altura del tallo por cada clasificación.
+
+```{r}
+boxplot(df$stem.height ~ df$class,
+        main = "Box Plot de Stem Height por Clase",
+        xlab = "Clase",
+        ylab = "Stem Height",
+        col = c("lightcoral", "lightgreen"),
+        names = c("No Venenoso", "Venenoso"))
 
 ```
 
+Como se observa, los hongos venenosos presentan un rango intercuartílico (RIQ) más amplio, lo que indica una mayor variabilidad en la altura del tallo entre el 25% y el 75% superior de los datos en comparación con los hongos no venenosos. Esto sugiere que, aunque los hongos no venenosos muestran una mayor variabilidad general en altura, los hongos venenosos exhiben una mayor variabilidad en las alturas dentro del rango intercuartílico, es decir, en el rango más representativo de alturas. Además, los hongos no venenosos presentan una cantidad significativamente mayor de valores atípicos en comparación con los venenosos, lo que sugiere una mayor dispersión en las alturas extremas.
+
+**Stem Width**
 
 ```{r}
-#Variables categóricas
+boxplot(df$stem.width ~ df$class,
+        main = "Box Plot de Stem Width por Clase",
+        xlab = "Clase",
+        ylab = "Stem Width",
+        col = c("lightcoral", "lightgreen"),
+        names = c("No Venenoso", "Venenoso"))
+
+print(calcular_estadisticas(df, "stem.width"))
+```
+
+Al igual que con la altura del tallo, el análisis del ancho del tallo muestra que tanto la media como la mediana son mayores en los hongos no venenosos en comparación con los venenosos. Esto sugiere que, en promedio, los hongos no venenosos tienden a tener tallos más anchos. Además, la mayor variabilidad general en los datos se encuentra en los hongos no venenosos.
+
+Sin embargo, al observar el rango intercuartílico (IQR), se encuentra que los hongos no venenosos tienen un IQR de 11.17, apenas superior al de los hongos venenosos, que es de 10.29. Esto indica una ligera mayor variabilidad en los anchos de tallo de los hongos no venenosos dentro del rango intercuartílico, sugiriendo que hay más diversidad en las medidas de ancho del tallo en los valores centrales de esta clase.
+
+**Cap Color**
+
+```{r}
 
 ggplot(df_counts_color, aes(x = cap.color, y = n, fill = class)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -165,6 +204,17 @@ ggplot(df_counts_color, aes(x = cap.color, y = n, fill = class)) +
                     labels = c("No venenoso", "Venenoso")) +
   theme_minimal()
 
+```
+En el análisis del color del sombrero (**cap.color**) en los hongos venenosos y no venenosos, se destacan varias tendencias importantes.
+
+El color más común en el conjunto de datos es el Marrón (“n”), con un total de 10,478 hongos no venenosos y 9,702 venenosos. En contraste, el color Azul (“l”) es el menos frecuente, con 365 hongos no venenosos y 286 venenosos.
+
+Entre los colores que predominan en los hongos no venenosos, el color Ante (“b”) es el que tiene la mayor proporción de no venenosos, con un 77.52% de hongos no venenosos. Le sigue el color Gris(“g”), con un 56.24% de hongos no venenosos.
+
+En el caso de los hongos venenosos, el color Verde (“r”) es el que tiene la mayor probabilidad de ser venenoso, con un 88.52% de hongos venenosos. A este le siguen el color Rojo (“e”), con un 77.28% de hongos venenosos, y el color Rosa (“p”), con un 76.3% de hongos venenosos.
+
+**Cap Shape**
+```{r}
 ggplot(df, aes(x = cap.shape, fill = class)) +
   geom_bar(position = "stack") +
   labs(title = "Distribución de Cap Shape por Clase (Venenoso/No Venenoso)",
@@ -176,6 +226,15 @@ ggplot(df, aes(x = cap.shape, fill = class)) +
   theme_minimal() 
 ```
 
+En el análisis de la forma del sombrero (cap.shape) en los hongos venenosos y no venenosos, se destacan varias tendencias importantes.
+
+La forma más común en el conjunto de datos es la forma Convexa (“x”), con un total de 10,844 hongos no venenosos y 11,505 venenosos. En contraste, la forma Cónica (“c”) es la menos frecuente, con 635 hongos no venenosos y 868 venenosos.
+
+Entre las formas que predominan en los hongos no venenosos, la forma Esférica (“p”) es la que tiene la mayor probabilidad de ser no venenosa, con un 60.86% de hongos no venenosos. 
+
+En el caso de los hongos venenosos, la forma de Campana (“b”) es la que tiene la mayor probabilidad de ser venenosa, con un 79.31% de hongos venenosos. A esta le siguen “otras formas” (“o”), con un 68.40% de hongos venenosos, y la forma Cónica (“c”), con un 57.75% de hongos venenosos.
+
+## 3. Construcción de un árbol de decisión básico
 ```{r}
 set.seed(20)
 
@@ -187,10 +246,27 @@ tree <- rpart(formula = class ~ .,
 ```
 
 ```{r}
-
+#Visualización del árbol
 rpart.plot(tree)
 
+#descarga de la imagen para ver el árbol con mayor calidad
+png(filename = "arbol_decision.png", width = 1600, height = 1200, res = 300)
+rpart.plot(tree)
+dev.off()
+
 ```
+
+En el árbol de decisión presentado, la estructura general se basa en una serie de divisiones secuenciales que segmentan el conjunto de datos según los atributos de los hongos. El nodo raíz inicia la clasificación utilizando el ancho del tallo (**stem width**). Los hongos se dividen en dos grupos dependiendo de si el ancho del tallo es mayor o igual a 8.7 cm. Esto es coherente con el análisis realizado en el ejercicio anterior, en el que explicamos que, en promedio, los hongos no venenosos tienen un ancho de tallo mayor que los venenosos. 
+
+Para los hongos con un ancho de tallo inferior a 8.7, los cuales componen un 43% de los datos, el árbol los clasifica como venenosos con una precisión del 68%. En este nodo, se realiza una segunda división basada en el color del tallo (**stem color**). En este caso, los hongos que presentan cualquier color excepto gris, azul, naranja, verde o amarillo son finalmente clasificados como venenosos, con una precisión del 82%.
+ 
+Por otro lado, los hongos cuyo ancho de tallo es mayor o igual a 8.7 se dividen en función del color del sombrero (**cap color**). En esta etapa, el árbol clasifica el 57% de los datos totales, con una precisión del 45% en la identificación de hongos venenosos. Los hongos que tienen colores como verde, rosa o rojo son considerados no venenosos.
+
+En conjunto, el árbol utiliza el ancho del tallo como primer criterio de división, seguido por características específicas del tallo o del sombrero, permitiendo una clasificación detallada de los hongos en venenosos o no venenosos. La imagen del árbol ilustra visualmente cómo estas decisiones se ramifican y cómo cada característica contribuye a la clasificación final.
+
+Las variables `cap shape`, `does-bruise-bleed`, `gill-spacing`, `stem-height`, `veil type`, `veil color`, `has ring`, `spore print color`, y `season` no influyeron en la construcción del árbol de decisión. Esto significa que el modelo habría generado el mismo árbol incluso si estas características no hubieran estado presentes en el conjunto de datos de entrenamiento.
+
+También, hemos notado que en nuestro árbol de decisión, los colores más intensos están concentrados en las hojas. Esto se debe a que las mismas representan las decisiones finales basadas en un número mayor de observaciones, lo que resulta en una clasificación más precisa de los hongos en venenosos o no venenosos.
 
 ```{r}
 # Imprimir los valores por defecto de los hiperparámetros
@@ -203,30 +279,53 @@ cat("maxdepth:", tree$control$maxdepth, "\n")
 cat("xval:", tree$control$xval, "\n")
 
 ```
+El valor por defecto de minsplit indica que para poder particionar un nodo, éste debe contar con al menos 20 observaciones, mientras que minbucket muestra que un nodo debe contar con al menos 7 observaciones para ser considerado como tal.
 
+Por otro lado, cp es el parámetro de complejidad α. Significa que el árbol no realizará una partición si la proporción de reducción del error es menor a 0.01. Cabe aclarar que este parámetro sirve para evitar hacer particiones que no reduzcan significativamente el error y así disminuir el tiempo de cómputo.
+
+Luego, maxdepth hace referencia a la profundidad máxima que puede alcanzar el árbol. Si bien el valor por defecto es 30, nuestro árbol tiene una profundidad de 8, lo que significa que los valores de los parámetros mencionados anteriormente le impidieron alcanzar dicho máximo.
+
+Finalmente, xval indica que se deben usar 10 particiones de validación cruzada durante el proceso de poda del árbol.
+
+## 4. Evaluación del árbol de decisión básico
 ```{r}
 y_pred  <- predict(tree, newdata = test_data, type = "class")
 ```
 
+**Matriz de confusión**
 ```{r}
 ConfusionMatrix(y_pred, y_test)
 ```
+La matriz de confusión indica que el modelo tiene un buen desempeño en la clasificación de hongos. Los Verdaderos Negativos (2519) representan los hongos que fueron correctamente identificados como no venenosos. Los Falsos Positivos (909) corresponden a hongos que fueron erróneamente clasificados como venenosos cuando en realidad no lo son. Los Falsos Negativos (387) son hongos que fueron incorrectamente identificados como no venenosos cuando sí lo eran. En la realidad, este error podría representar un riesgo significativo para la seguridad, ya que los hongos venenosos podrían ser consumidos por error, exponiendo a las personas a posibles intoxicaciones. Finalmente, los Verdaderos Positivos (3685) son los hongos que fueron correctamente identificados como venenosos.
 
+**Accuracy**
 ```{r}
 Accuracy(y_pred, y_test)
 ```
+La exactitud (Accuracy) del modelo es de 0.8272, lo que significa que el 82.72% de las predicciones realizadas por el modelo son correctas. Este alto nivel de exactitud indica que el modelo es bastante eficaz en la clasificación de hongos, tanto en la identificación de hongos venenosos como no venenosos.
 
+**Precision y Recall**
 ```{r}
 Precision(y_test, y_pred)
 Recall(y_test, y_pred)
 
 ```
+El modelo presenta una precision de 0.8668273, indicando que el 86.68% de las veces que clasifica un hongo como venenoso, la predicción es correcta. Esto refleja una alta tasa de aciertos en las clasificaciones positivas realizadas por el modelo. 
+Por otro lado, el recall es de 0.7348308, lo que significa que el 73.48% de los hongos venenosos han sido correctamente identificados por el modelo. Aunque el recall es un poco menor que la precisión, el modelo demuestra una buena capacidad para detectar hongos venenosos.
+
+**F1-Score**
 ```{r}
 F1_Score(y_test, y_pred)
 ```
+El F1-score del modelo es 0.79539, lo que proporciona una medida combinada de precisión y recall. La misma indica que el modelo no solo tiene una alta precisión en sus predicciones positivas, sino que también mantiene una capacidad sólida para encontrar la mayoría de los casos positivos. El modelo muestra un desempeño equilibrado y efectivo en la clasificación de hongos venenosos.
+
+**AUC-ROC**
 ```{r}
 AUC(y_pred, y_test)
 ```
+El AUC-ROC del modelo es 0.8198958, lo que indica una buena capacidad para diferenciar entre hongos venenosos y no venenosos. Este valor demuestra que el modelo tiene un desempeño sólido en la clasificación correcta de ambas clases. En términos prácticos, esto significa que hay aproximadamente un 81.98% de probabilidad de que el modelo asigne una probabilidad de ser venenoso más alta a una observación venenosa aleatoria que a una instancia no venenosa aleatoria.
+
+## 5. Optimización del modelo
 ```{r}
 optimizar_hiperparametros <- function(train_data, validation_data, maxdepth_range, minsplit_range, minbucket_range){
   # Crear una lista para almacenar las precisiones
@@ -236,7 +335,6 @@ optimizar_hiperparametros <- function(train_data, validation_data, maxdepth_rang
     minbucket = integer(),
     AUC_score = numeric()
   )
-  cont <- 0
   
   # Entrenar y evaluar el modelo para cada combinación de hiperparámetros
   for (maxdepth in maxdepth_range) {
@@ -259,9 +357,6 @@ optimizar_hiperparametros <- function(train_data, validation_data, maxdepth_rang
           tabla,
           list(maxdepth = maxdepth, minsplit = minsplit, minbucket = minbucket, AUC_score = AUC_curr))
         
-        print(AUC_curr)
-        cont <- cont + 1
-        print(cont)
       }
     }
   }
@@ -298,7 +393,6 @@ calcular_AUC_testeo <- function(tree, test_data){
 }
 ```
 
-
 ```{r}
 # Rangos para los hiperparámetros
 maxdepth_range <- 10:20
@@ -310,13 +404,71 @@ tabla_optima <- optimizar_hiperparametros(train_data, validation_data, maxdepth_
 
 ```{r}
 tree_best <- hacer_tree_best(tabla_optima, train_data)
-
 calcular_AUC_testeo(tree_best, test_data)
-#comparar este valor con el del punto 3
+
 ```
 
+Para optimizar los hiperparámetros, optamos por realizar una grid search.
+Con respecto al nivel de profundidad máximo del árbol, optamos por tomar un rango de 10 a 20 inclusive. Como nuestro árbol por defecto tenía un nivel de profundidad de 8, optamos por tomar un rango un poco más alto que este valor para aumentar la complejidad del modelo. Además, decidimos que 20 sea el límite de búsqueda porque consideramos que valores más altos podrían llevar a overfitting.
+
+Por otra parte, el rango que utilizamos para la búsqueda del valor óptimo de minisplit fue de 20 a 2020, tomando 20 de esos valores separados uniformemente. Decidimos explorar exhaustivamente valores altos porque consideramos que podrían ayudar a prevenir overfitting si permiten menos divisiones.
+
+Por último, exploramos valores para minbucket desde el 2 a 20, tomando valor por medio. Debido a que el valor por defecto es 7, optamos por un rango alrededor de ese valor.
+
+Mediante la siguiente visualización, podemos observar la relación entre la profundidad máxima del árbol y el valor de ROC-AUC. Para cada valor de maxdepth, graficamos los ROC-AUC obtenidos con las distintas combinaciones de minsplit y minbucket. A medida que la profundidad máxima aumenta, se puede notar que el máximo ROC-AUC obtenido incrementa. No obstante, dicho máximo parece estancarse cuando el modelo cuenta con una profundidad máxima de 15 niveles.
+
+
 ```{r}
-#7.
+# Calcular los máximos AUC_score por cada valor de maxdepth
+max_auc <- aggregate(AUC_score ~ maxdepth, data = tabla_optima, max)
+
+ggplot(tabla_optima, aes(x = maxdepth, y = AUC_score)) +
+  geom_point(size = 3, shape = 21, color = "blue", fill = "lightblue", alpha = 0.7) +  # Cambia tamaño, forma, color, y agrega transparencia
+  geom_line(data = max_auc, aes(x = maxdepth, y = AUC_score), color = "red", linewidth = 1) +  # Línea roja para máximos AUC_score
+  theme_minimal() +
+  labs(title = "Performance para distintos hiperparámetros",
+       x = "maxdepth",
+       y = "AUC-ROC")
+```
+
+## 6. Interpretación de resultados
+```{r}
+#visualizar árbol
+rpart.plot(tree_best)
+
+# Descargar plot para mayor resolución
+png(filename = "arbol_decision_best.png", width = 1600, height = 1200, res = 300)
+rpart.plot(tree_best)
+dev.off()
+
+```
+Nos encontramos con que la visualización del árbol optimizado no resultaba razonable, debido a que muestra un árbol con una profundidad de 15, lo que lo hace muy complejo y ramificado. El mínimo de 20 observaciones para dividir y un mínimo de 2 observaciones por nodo hoja contribuyen a crear muchos nodos pequeños. Por lo tanto, esto resulta en una estructura difícil de interpretar y sobrecargada visualmente. 
+
+Al medir el valor de AUC-ROC en el conjunto de testeo, el modelo obtuvo un score de 0.9958244. Comparándolo con el árbol obtenido con los parámetros por defecto, el cual alcanzó un AUC-ROC de 0.8198958, podemos notar que la performance mejoró significativamente.
+
+Por otro lado, el nivel de profundidad alcanzado prácticamente se duplicó, pasando de 8 a 15, resultando en un árbol mucho más complejo que el básico.
+
+Sin embargo, las variables que se utilizan en los cortes de los primeros 2 niveles no cambiaron, lo cual reafirma la importancia de las variables stem width, stem color y cap color al momento de predecir si un hongo es venenoso o no.
+
+A pesar de que no se encuentre en los primeros 2 cortes, también podemos notar que gill color es la variable más importante, ya que contribuye al 10.64% de la importancia total del modelo.
+
+
+```{r}
+importance <- tree_best$variable.importance 
+importance <- 100*importance/sum(importance)
+barplot(importance, 
+        main = "Importancia de las Variables", 
+        las = 2,  
+        cex.names = 0.8,  
+        ylab = "Porcentaje de la importancia")
+
+
+```
+
+
+## 7. Análisis del impacto de los valores faltantes
+
+```{r}
 
 generar_NA <- function(data, semilla, proporcion){
   set.seed(semilla)
@@ -391,3 +543,35 @@ tree_best_75 <- hacer_tree_best(tabla_optima_75, train_data_75)
 
 calcular_AUC_testeo(tree_best_75, test_data_75)
 ```
+
+
+```{r}
+data <- data.frame(
+  porcentaje_na = c(0, 0.20, 0.50, 0.75),
+  roc_auc = c(0.9958244, 0.9683621, 0.8689608, 0.6869045)
+)
+
+ggplot(data, aes(x = porcentaje_na, y = roc_auc)) +
+  geom_line(color = "red", size = 1) +
+  geom_point(size = 4, color = "blue", alpha = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "Impacto de los valores faltantes en la performance del modelo",
+    x = "Porcentaje de datos reemplazados por NA",
+    y = "ROC-AUC"
+  ) +
+  scale_x_continuous(labels = scales::percent)  # Mostrar el eje x como porcentaje
+
+
+```
+Se observa que a medida que aumenta el porcentaje de valores faltantes en las variables predictoras, el rendimiento del modelo disminuye significativamente. Esto se refleja tanto en la disminución del AUC en validación como en testeo. Con un 20% de valores faltantes, el modelo todavía logra un rendimiento robusto, pero al llegar al 75%, el rendimiento se deteriora considerablemente, lo que sugiere que el modelo se enfrenta a dificultades para generalizar correctamente con un alto porcentaje de datos faltantes.
+
+## 8. Conclusiones y discusión
+
+El modelo de árbol de decisión ha demostrado ser una herramienta efectiva para la clasificación de la toxicidad de los hongos, con resultados sólidos en términos de precisión y AUC-ROC. La optimización de los hiperparámetros ha contribuido a mejorar el rendimiento del modelo, destacando un AUC-ROC notable para ciertos árboles encontrados.
+
+Sin embargo, la presencia de datos faltantes ha tenido un impacto significativo en el rendimiento del modelo. A medida que aumentó el porcentaje de valores faltantes en las variables predictoras, observamos una disminución considerable en el AUC-ROC, lo que nos sugiere que el modelo enfrenta dificultades para generalizar cuando los datos son incompletos. Con un 20% de valores faltantes, el rendimiento se mantuvo robusto, pero con un 75%, la degradación en la precisión del modelo fue evidente, indicando que los datos faltantes afectan negativamente la capacidad predictiva.
+
+Para futuras investigaciones, creemos que sería necesario explorar estrategias para manejar los valores faltantes de manera efectiva. Además, el uso de métodos de ensamble de modelos, como Random Forest, podría proporcionar mayor robustez y precisión al combinar múltiples árboles de decisión. También sería beneficioso realizar un análisis más detallado de la importancia de las variables para identificar cuáles tienen el mayor impacto en la clasificación, lo que podría ayudar a simplificar y optimizar el modelo.
+
+
