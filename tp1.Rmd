@@ -8,6 +8,7 @@ date: "2024-08-19"
 library(rpart)
 library(rpart.plot)
 library(MLmetrics)
+library(ggplot2)
 
 ```
 
@@ -46,10 +47,6 @@ head(df)
 
 
 ```
-```{r}
-#Visualización
-
-```
 
 ```{r}
 set.seed(123)  # Para reproducibilidad
@@ -83,22 +80,31 @@ y_test <- test_data$class
 head(train_data)
 ```
 ```{r}
-#Análisis de datos 
-install.packages("ggplot2")
-library(ggplot2)
+#Análisis de datos
 
+##### conteo de hongos venenosos y no venenosos
+counts <- table(df$class)
 
-# Venenosos vs No venenosos
-barplot(table(df$class),
-        main = "Cantidad de Hongos Venenosos y No Venenosos",
-        xlab = "Clase",
-        ylab = "Cantidad",
-        col = c("lightcoral", "lightgreen"),
-        names.arg = c("No Venenoso", "Venenoso"))
+barplot_obj <- barplot(counts,
+                       main = "Cantidad de Hongos Venenosos y No Venenosos",
+                       xlab = "Clase",
+                       ylab = "Cantidad",
+                       col = c("lightcoral", "lightgreen"),
+                       names.arg = c("No Venenoso", "Venenoso"),
+                       ylim = c(0, 30000))
 
-#Variables numericas
-# > num -> no venenoso
+# Agregar counts a las barras
+text(x = barplot_obj, 
+     y = counts, 
+     label = as.vector(counts),  
+     pos = 3,        
+     cex = 0.8, 
+     col = "black")
 
+```
+
+```{r}
+#####Variables numericas
 boxplot(df$stem.height ~ df$class,
         main = "Box Plot de Stem Height por Clase",
         xlab = "Clase",
@@ -113,40 +119,67 @@ boxplot(df$stem.width ~ df$class,
         col = c("lightcoral", "lightgreen"),
         names = c("No Venenoso", "Venenoso"))
 
-boxplot(df$cap.diameter ~ df$class,
-        main = "Box Plot de Cap Diameter por Clase",
-        xlab = "Clase",
-        ylab = "Cap Diameter",
-        col = c("lightcoral", "lightgreen"),
-        names = c("No Venenoso", "Venenoso"))
+##### Estadísticas descriptivas
+calcular_estadisticas <- function(data, columna) {
+  
+  stats <- aggregate(data[[columna]] ~ class, data = data, FUN = function(x) c(mean = mean(x, na.rm = TRUE), 
+                                                                               median = median(x, na.rm = TRUE), 
+                                                                               sd = sd(x, na.rm = TRUE)))
+  stats <- do.call(data.frame, stats)
+  
+  quartiles_stats <- aggregate(data[[columna]] ~ class, data = data, FUN = function(x) {
+    Q1 <- quantile(x, 0.25, na.rm = TRUE)
+    Q3 <- quantile(x, 0.75, na.rm = TRUE)
+    IQR <- Q3 - Q1
+    return(c(Q1 = Q1, Q3 = Q3, IQR = IQR))
+  })
+  quartiles_stats <- do.call(data.frame, quartiles_stats)
+  
+  # Unir no venenosos y venenosos
+  final_stats <- merge(stats, quartiles_stats, by = "class")
+  
+  # Renombre
+  colnames(final_stats) <- c("Clase", "Media", "Mediana", "Desvio Estándar", "Q1 (25%)", "Q3 (75%)", "IQR")
+  
+  return(final_stats)
+}
+
+
+print(calcular_estadisticas(df, "stem.height"))
+print(calcular_estadisticas(df, "stem.width"))
+
+
 ```
 
 
 ```{r}
 #Variables categóricas
-ggplot(df, aes(x = cap.color, fill = class)) +
-  geom_bar(position = "stack") +
+
+ggplot(df_counts_color, aes(x = cap.color, y = n, fill = class)) +
+  geom_bar(stat = "identity", position = "stack") +
   labs(title = "Distribución de Cap Color por Clase (Venenoso/No Venenoso)",
        x = "Cap Color",
        y = "Cantidad",
        fill = "Clase") +
-  scale_fill_manual(values =  c("lightcoral", "lightgreen")) +
+  scale_fill_manual(values = c("lightcoral", "lightgreen"),
+                    labels = c("No venenoso", "Venenoso")) +
   theme_minimal()
 
 ggplot(df, aes(x = cap.shape, fill = class)) +
   geom_bar(position = "stack") +
-  labs(title = "Distribución de Cap Color por Clase (Venenoso/No Venenoso)",
+  labs(title = "Distribución de Cap Shape por Clase (Venenoso/No Venenoso)",
        x = "Cap Color",
        y = "Cantidad",
        fill = "Clase") +
-  scale_fill_manual(values =  c("lightcoral", "lightgreen")) +
-  theme_minimal()
+  scale_fill_manual(values = c("lightcoral", "lightgreen"),
+                    labels = c("No venenoso", "Venenoso")) +
+  theme_minimal() 
 ```
 
 ```{r}
 set.seed(20)
 
-# Crear el modelo de árbol de decisión usando todas las columnas como predictores
+# Creamos el modelo de árbol de decisión usando todas las columnas como predictores
 tree <- rpart(formula = class ~ ., 
               data = train_data, 
               method = "class")
@@ -154,35 +187,25 @@ tree <- rpart(formula = class ~ .,
 ```
 
 ```{r}
-# Configurar el archivo de salida con mayor resolución
-png(filename = "arbol_decision.png", width = 1600, height = 1200, res = 300)
 
-# Generar el gráfico
 rpart.plot(tree)
-
-# Cerrar el dispositivo gráfico
-dev.off()
-
 
 ```
 
 ```{r}
 # Imprimir los valores por defecto de los hiperparámetros
+
 cat("Valores de los hiperparámetros por defecto:\n")
 cat("minsplit:", tree$control$minsplit, "\n")
 cat("minbucket:", tree$control$minbucket, "\n")
 cat("cp:", tree$control$cp, "\n")
 cat("maxdepth:", tree$control$maxdepth, "\n")
 cat("xval:", tree$control$xval, "\n")
-cat("maxcompete:", tree$control$maxcompete, "\n")
-#teoría!!!!
-#exp del arbol
+
 ```
 
 ```{r}
-
 y_pred  <- predict(tree, newdata = test_data, type = "class")
-
 ```
 
 ```{r}
